@@ -13,11 +13,9 @@ export default class Agent29 {
     this.fitness = fitness;
   }
 
-  forward(input: number[]): number[] {
-    let output = this.genome.forward(input);
-    output = output.map((ele) =>
-      activationFunctions[this.config.activationFunction](ele),
-    );
-    return output;
+  forward(inputs: number[]): number[] {
+    const activationFunction =
+      activationFunctions[this.config.activationFunction];
+    return this.genome.forward(inputs, activationFunction);
   }
 }
