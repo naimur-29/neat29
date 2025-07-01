@@ -1,12 +1,13 @@
+import { Population } from "./src/population.js";
 import { DefaultReproduction } from "./src/reproduction.js";
-import { DefaultStagnation } from "./src/stagnation.js"; // From previous translation
-import { DefaultSpeciesSet, Species } from "./src/species.js"; // From previous translation
-import { ReporterSet, StdOutReporter } from "./src/reporting.js"; // From previous translation
-import { DefaultGenome } from "./src/genome.js"; // From previous translation
+import { DefaultStagnation } from "./src/stagnation.js";
+import { DefaultSpeciesSet } from "./src/species.js";
+import { ReporterSet, StdOutReporter } from "./src/reporting.js";
+import { DefaultGenome } from "./src/genome.js";
 
 export function main() {
-  // --- 1. Define a SINGLE, comprehensive raw config object ---
-  const raw_config = {
+  // --- 1. Define the main configuration ---
+  let raw_config = {
     // Genome & Attributes
     num_inputs: 2,
     num_outputs: 1,
@@ -61,24 +62,41 @@ export function main() {
     compatibility_threshold: 3.0,
   };
 
-  // Helper function to create a filtered config object for a specific class.
+  raw_config = {
+    ...raw_config,
+
+    // Population
+    pop_size: 50,
+    fitness_criterion: "max",
+    fitness_threshold: 95.0,
+    no_fitness_termination: false,
+    reset_on_extinction: true,
+    // Genome
+    num_inputs: 2,
+    num_outputs: 1,
+    num_hidden: 0,
+    feed_forward: true,
+    // ... other component configs ...
+    compatibility_threshold: 3.0,
+    elitism: 2,
+    max_stagnation: 15,
+    species_fitness_func: "mean",
+    // ... and all the attribute configs ...
+  };
+
+  // --- 2. Create Component Instances ---
   function create_sub_config(config, class_def) {
     const sub_config = {};
     const param_names = class_def.get_config_params().map((p) => p.name);
     for (const name of param_names) {
-      if (config[name] !== undefined) {
-        sub_config[name] = config[name];
-      }
+      if (config[name] !== undefined) sub_config[name] = config[name];
     }
     return sub_config;
   }
 
-  // --- 2. Setup All Components ---
   const reporters = new ReporterSet();
   reporters.add(new StdOutReporter(true));
 
-  // Create each component's config object using its static `parse_config` method.
-  // This encapsulates the creation logic within each class.
   const genome_config = DefaultGenome.parseConfig(raw_config);
   const stagnation_config = DefaultStagnation.parse_config(
     create_sub_config(raw_config, DefaultStagnation),
@@ -90,7 +108,6 @@ export function main() {
     create_sub_config(raw_config, DefaultSpeciesSet),
   );
 
-  // Instantiate the main components, passing in their specific config objects.
   const stagnation = new DefaultStagnation(stagnation_config, reporters);
   const species_set = new DefaultSpeciesSet(species_set_config, reporters);
   const reproduction = new DefaultReproduction(
@@ -99,8 +116,11 @@ export function main() {
     stagnation,
   );
 
-  // Create a main config object that holds all component instances/configs
+  // --- 3. Create the main, top-level config object for the Population ---
   const main_config = {
+    // Pass raw population configs directly
+    ...raw_config,
+    // Pass component instances
     genome_type: DefaultGenome,
     genome_config: genome_config,
     reproduction: reproduction,
@@ -108,51 +128,45 @@ export function main() {
     species_set: species_set,
   };
 
-  // --- 3. Create a mock population and speciate it ---
-  const pop_size = 10;
-  let population = reproduction.create_new(
-    DefaultGenome,
-    genome_config,
-    pop_size,
-  );
+  // --- 4. Define the Fitness Function ---
+  // This is the core task-specific part you provide.
+  // It must be an `async` function.
+  async function eval_genomes(population, config) {
+    // Example: A simple fitness function where fitness is higher
+    // for genomes that are "close" to a target value.
+    const target = 0.5;
+    for (const genome of population.values()) {
+      // In a real scenario, you would create a phenotype (neural network)
+      // from the genome and evaluate its performance on a task.
+      // Here, we'll just use a mock value based on its first gene's weight.
+      const first_conn = Object.values(genome.connections)[0];
+      const weight = first_conn ? first_conn.weight : 0;
 
-  for (const genome of population.values()) {
-    genome.fitness = Math.random() * 100;
-  }
-  species_set.speciate(main_config, population, 0);
-  console.log(
-    `Initial population created with ${population.size} members in ${species_set.species.size} species.`,
-  );
-
-  // --- 4. Run the reproduce method to create the next generation ---
-  let generation = 1;
-  console.log(`\n--- Reproducing to create generation ${generation} ---`);
-  const new_population = reproduction.reproduce(
-    main_config,
-    species_set,
-    pop_size,
-    generation,
-  );
-
-  // --- 5. Inspect Results ---
-  console.log(`\nNew population created with ${new_population.size} members.`);
-  console.log(
-    `Remaining species after reproduction: ${species_set.species.size}`,
-  );
-
-  // Verify that the new genomes have ancestors
-  const first_new_genome_key = Array.from(new_population.keys())[
-    reproduction_config.elitism
-  ]; // Get a non-elite
-  if (first_new_genome_key) {
-    const ancestors = reproduction.ancestors.get(first_new_genome_key);
-    console.log(
-      `Genome ${first_new_genome_key} was created from parents: [${ancestors}]`,
-    );
-  } else {
-    console.log("No non-elite genomes were created in this small example.");
+      // Fitness is 100 - distance from target
+      const distance = Math.abs(weight - target);
+      genome.fitness = 100.0 - distance;
+    }
   }
 
-  // The new population is now ready for the next round of evaluation.
-  population = new_population;
+  // --- 5. Run the evolution ---
+  async function run_evolution() {
+    // Create the population.
+    const p = new Population(main_config);
+
+    // Add reporters.
+    p.add_reporter(new StdOutReporter(true));
+
+    // Run the algorithm for up to 50 generations.
+    try {
+      const winner = await p.run(eval_genomes, 50);
+      console.log("\n--- Evolution Complete ---");
+      console.log("Best genome found:");
+      console.log(winner.toString());
+    } catch (e) {
+      console.error("Evolution failed:", e);
+    }
+  }
+
+  // Start the process
+  run_evolution();
 }
