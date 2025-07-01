@@ -1,54 +1,33 @@
 /**
  * Deals with the attributes (variable parameters) of genes.
+ * This version consistently uses snake_case for all configuration properties.
  */
 import { ConfigParameter } from "./config.js";
-import { choice, gauss, random, uniform, randint } from "./randomUtil.js";
+import { choice, gauss, random, uniform } from "./randomUtil.js";
 
-/** Helper to convert snake_case to camelCase */
-const snakeToCamel = (s) => s.replace(/(_\w)/g, (m) => m[1].toUpperCase());
-
-/**
- * Superclass for the type-specialized attribute subclasses, used by genes.
- */
 class BaseAttribute {
-  /**
-   * @param {string} name - The base name of the attribute (e.g., 'bias', 'weight').
-   * @param {Object} [defaultOverride={}] - An object to override the default values of config items.
-   */
   constructor(name, defaultOverride = {}) {
     this.name = name;
-
-    this._configItems = { ...this.constructor._configItems };
+    this._config_items = { ...this.constructor._config_items };
     for (const [key, value] of Object.entries(defaultOverride)) {
-      if (this._configItems[key]) {
-        this._configItems[key] = [this._configItems[key][0], value];
+      if (this._config_items[key]) {
+        this._config_items[key] = [this._config_items[key][0], value];
       }
     }
 
-    // --- THIS IS THE FIX ---
-    // Create properties for the full config item names (e.g., this.mutateRateName)
-    // by converting the snake_case key to camelCase.
-    for (const key in this._configItems) {
-      const camelCaseKey = snakeToCamel(key);
-      this[`${camelCaseKey}Name`] = this.configItemName(key);
+    // Create properties for the full config item names (e.g., this.mutate_rate_name)
+    // These will hold the final snake_case key, like 'bias_mutate_rate'.
+    for (const key in this._config_items) {
+      this[`${key}_name`] = this.configItemName(key);
     }
   }
 
-  /**
-   * Generates the full configuration parameter name.
-   * @param {string} configItemBaseName - The base name (e.g., 'mutate_rate').
-   * @returns {string} The full name (e.g., 'bias_mutate_rate').
-   */
   configItemName(configItemBaseName) {
     return `${this.name}_${configItemBaseName}`;
   }
 
-  /**
-   * Gets the configuration parameters for this attribute.
-   * @returns {ConfigParameter[]} An array of ConfigParameter instances.
-   */
   getConfigParams() {
-    return Object.entries(this._configItems).map(
+    return Object.entries(this._config_items).map(
       ([name, [type, defaultValue]]) => {
         return new ConfigParameter(
           this.configItemName(name),
@@ -60,14 +39,8 @@ class BaseAttribute {
   }
 }
 
-// ... the rest of the file (FloatAttribute, IntegerAttribute, etc.) remains exactly the same ...
-
-/**
- * Class for floating-point numeric attributes, such as the response
- * of a node or the weight of a connection.
- */
 export class FloatAttribute extends BaseAttribute {
-  static _configItems = {
+  static _config_items = {
     init_mean: ["number", null],
     init_stdev: ["number", null],
     init_type: ["string", "gaussian"],
@@ -79,49 +52,45 @@ export class FloatAttribute extends BaseAttribute {
   };
 
   clamp(value, config) {
-    const minValue = config[this.minValueName];
-    const maxValue = config[this.maxValueName];
-    return Math.max(Math.min(value, maxValue), minValue);
+    const min_value = config[this.min_value_name];
+    const max_value = config[this.max_value_name];
+    return Math.max(Math.min(value, max_value), min_value);
   }
 
   initValue(config) {
-    const mean = config[this.initMeanName];
-    const stdev = config[this.initStdevName];
-    const initType = config[this.initTypeName].toLowerCase();
+    const mean = config[this.init_mean_name];
+    const stdev = config[this.init_stdev_name];
+    const init_type = config[this.init_type_name].toLowerCase();
 
-    if (initType.includes("gauss") || initType.includes("normal")) {
+    if (init_type.includes("gauss") || init_type.includes("normal")) {
       return this.clamp(gauss(mean, stdev), config);
     }
-
-    if (initType.includes("uniform")) {
-      const min = Math.max(config[this.minValueName], mean - 2 * stdev);
-      const max = Math.min(config[this.maxValueName], mean + 2 * stdev);
+    if (init_type.includes("uniform")) {
+      const min = Math.max(config[this.min_value_name], mean - 2 * stdev);
+      const max = Math.min(config[this.max_value_name], mean + 2 * stdev);
       return uniform(min, max);
     }
-
     throw new Error(
-      `Unknown init_type '${config[this.initTypeName]}' for '${this.initTypeName}'`,
+      `Unknown init_type '${config[this.init_type_name]}' for '${this.init_type_name}'`,
     );
   }
 
   mutateValue(value, config) {
-    const mutateRate = config[this.mutateRateName];
-    const r = random();
-    if (r < mutateRate) {
-      const mutatePower = config[this.mutatePowerName];
-      return this.clamp(value + gauss(0.0, mutatePower), config);
+    const mutate_rate = config[this.mutate_rate_name];
+    if (random() < mutate_rate) {
+      const mutate_power = config[this.mutate_power_name];
+      return this.clamp(value + gauss(0.0, mutate_power), config);
     }
 
-    const replaceRate = config[this.replaceRateName];
-    if (r < replaceRate + mutateRate) {
+    const replace_rate = config[this.replace_rate_name];
+    if (random() < replace_rate) {
       return this.initValue(config);
     }
-
     return value;
   }
 
   validate(config) {
-    if (config[this.maxValueName] < config[this.minValueName]) {
+    if (config[this.max_value_name] < config[this.min_value_name]) {
       throw new Error(
         `Invalid min/max configuration for attribute ${this.name}`,
       );
@@ -129,59 +98,52 @@ export class FloatAttribute extends BaseAttribute {
   }
 }
 
-/**
- * Class for integer numeric attributes.
- */
-export class IntegerAttribute extends BaseAttribute {
-  static _configItems = {
-    replace_rate: ["number", null],
+export class StringAttribute extends BaseAttribute {
+  static _config_items = {
+    default: ["string", "random"],
+    options: ["array", null],
     mutate_rate: ["number", null],
-    mutate_power: ["number", null],
-    max_value: ["number", null],
-    min_value: ["number", null],
   };
 
-  clamp(value, config) {
-    const minValue = config[this.minValueName];
-    const maxValue = config[this.maxValueName];
-    return Math.max(Math.min(value, maxValue), minValue);
-  }
-
   initValue(config) {
-    return randint(config[this.minValueName], config[this.maxValueName]);
+    const default_value = config[this.default_name];
+    if (
+      default_value.toLowerCase() === "random" ||
+      default_value.toLowerCase() === "none"
+    ) {
+      const options = config[this.options_name];
+      return choice(options);
+    }
+    return default_value;
   }
 
   mutateValue(value, config) {
-    const mutateRate = config[this.mutateRateName];
-    const r = random();
-    if (r < mutateRate) {
-      const mutatePower = config[this.mutatePowerName];
-      const delta = Math.round(gauss(0.0, mutatePower));
-      return this.clamp(value + delta, config);
+    const mutate_rate = config[this.mutate_rate_name];
+    if (random() < mutate_rate) {
+      const options = config[this.options_name];
+      return choice(options);
     }
-
-    const replaceRate = config[this.replaceRateName];
-    if (r < replaceRate + mutateRate) {
-      return this.initValue(config);
-    }
-
     return value;
   }
 
   validate(config) {
-    if (config[this.maxValueName] < config[this.minValueName]) {
-      throw new Error(
-        `Invalid min/max configuration for attribute ${this.name}`,
-      );
+    const default_value = config[this.default_name];
+    if (
+      default_value.toLowerCase() !== "random" &&
+      default_value.toLowerCase() !== "none"
+    ) {
+      const options = config[this.options_name];
+      if (!options.includes(default_value)) {
+        throw new Error(
+          `Invalid initial value '${default_value}' for attribute ${this.name}`,
+        );
+      }
     }
   }
 }
 
-/**
- * Class for boolean attributes such as whether a connection is enabled or not.
- */
 export class BoolAttribute extends BaseAttribute {
-  static _configItems = {
+  static _config_items = {
     default: ["string", null],
     mutate_rate: ["number", null],
     rate_to_true_add: ["number", 0.0],
@@ -189,30 +151,26 @@ export class BoolAttribute extends BaseAttribute {
   };
 
   initValue(config) {
-    const defaultValue = String(config[this.defaultName]).toLowerCase();
-    if (["1", "on", "yes", "true"].includes(defaultValue)) return true;
-    if (["0", "off", "no", "false"].includes(defaultValue)) return false;
-    if (["random", "none"].includes(defaultValue)) return random() < 0.5;
-
+    const default_value = String(config[this.default_name]).toLowerCase();
+    if (["1", "on", "yes", "true"].includes(default_value)) return true;
+    if (["0", "off", "no", "false"].includes(default_value)) return false;
+    if (["random", "none"].includes(default_value)) return random() < 0.5;
     throw new Error(
-      `Unknown default value '${defaultValue}' for '${this.name}'`,
+      `Unknown default value '${default_value}' for '${this.name}'`,
     );
   }
 
   mutateValue(value, config) {
-    let mutateRate = config[this.mutateRateName];
+    let mutate_rate = config[this.mutate_rate_name];
     if (value) {
-      mutateRate += config[this.rateToFalseAddName];
+      mutate_rate += config[this.rate_to_false_add_name];
     } else {
-      mutateRate += config[this.rateToTrueAddName];
+      mutate_rate += config[this.rate_to_true_add_name];
     }
 
-    if (mutateRate > 0 && random() < mutateRate) {
-      // Re-randomize the value. This matches the behavior of other attributes where
-      // mutation may not necessarily change the value.
+    if (mutate_rate > 0 && random() < mutate_rate) {
       return random() < 0.5;
     }
-
     return value;
   }
 
@@ -229,57 +187,9 @@ export class BoolAttribute extends BaseAttribute {
       "random",
       "none",
     ]);
-    const defaultValue = String(config[this.defaultName]).toLowerCase();
-    if (!validDefaults.has(defaultValue)) {
+    const default_value = String(config[this.default_name]).toLowerCase();
+    if (!validDefaults.has(default_value)) {
       throw new Error(`Invalid default value for ${this.name}`);
-    }
-  }
-}
-
-/**
- * Class for string attributes such as the aggregation function of a node,
- * which are selected from a list of options.
- */
-export class StringAttribute extends BaseAttribute {
-  static _configItems = {
-    default: ["string", "random"],
-    options: ["array", null],
-    mutate_rate: ["number", null],
-  };
-
-  initValue(config) {
-    const defaultValue = config[this.defaultName];
-    if (
-      defaultValue.toLowerCase() === "random" ||
-      defaultValue.toLowerCase() === "none"
-    ) {
-      const options = config[this.optionsName];
-      return choice(options);
-    }
-    return defaultValue;
-  }
-
-  mutateValue(value, config) {
-    const mutateRate = config[this.mutateRateName];
-    if (mutateRate > 0 && random() < mutateRate) {
-      const options = config[this.optionsName];
-      return choice(options);
-    }
-    return value;
-  }
-
-  validate(config) {
-    const defaultValue = config[this.defaultName];
-    if (
-      defaultValue.toLowerCase() !== "random" &&
-      defaultValue.toLowerCase() !== "none"
-    ) {
-      const options = config[this.optionsName];
-      if (!options.includes(defaultValue)) {
-        throw new Error(
-          `Invalid initial value '${defaultValue}' for attribute ${this.name}`,
-        );
-      }
     }
   }
 }
