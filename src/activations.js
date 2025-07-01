@@ -100,7 +100,7 @@ function cubeActivation(z) {
  * Custom error for invalid activation functions.
  * Extends the built-in Error class.
  */
-class InvalidActivationFunctionError extends Error {
+export class InvalidActivationFunctionError extends Error {
   constructor(message) {
     super(message);
     this.name = "InvalidActivationFunctionError";
@@ -129,7 +129,7 @@ function validateActivation(func) {
  * Contains the list of current valid activation functions,
  * including methods for adding and getting them.
  */
-class ActivationFunctionSet {
+export class ActivationFunctionSet {
   constructor() {
     this.functions = {};
     this.add("sigmoid", sigmoidActivation);
