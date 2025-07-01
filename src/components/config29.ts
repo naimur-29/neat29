@@ -57,7 +57,7 @@ export class ConfigParameter {
 
 export class UnknownConfigItemError extends Error {}
 
-export class baseClassConfig {
+export class DefaultClassConfig {
   protected _params: ConfigParameter[];
   [key: string]: any; // Allow property access by string index
 
@@ -95,7 +95,7 @@ export interface IConfigurableClass {
   new (
     paramDict: Record<string, any>,
     paramList: ConfigParameter[],
-  ): baseClassConfig;
+  ): DefaultClassConfig;
   name: string;
   getParams(): ConfigParameter[];
 }
@@ -115,10 +115,10 @@ export class Config {
   public reset_on_extinction!: boolean;
   public no_fitness_termination!: boolean;
 
-  public genome_config: baseClassConfig;
-  public reproduction_config: baseClassConfig;
-  public species_set_config: baseClassConfig;
-  public stagnation_config: baseClassConfig;
+  public genome_config: DefaultClassConfig;
+  public reproduction_config: DefaultClassConfig;
+  public species_set_config: DefaultClassConfig;
+  public stagnation_config: DefaultClassConfig;
 
   constructor(
     genomeType: IConfigurableClass,
@@ -134,7 +134,7 @@ export class Config {
       throw new Error("'NEAT' section not found in configuration.");
     }
 
-    const neatConfig = new baseClassConfig(neatSection, Config.__params);
+    const neatConfig = new DefaultClassConfig(neatSection, Config.__params);
     for (const p of Config.__params) {
       (this as any)[p.name] = (neatConfig as any)[p.name];
     }
@@ -164,7 +164,7 @@ export class Config {
     }
 
     const output = {
-      NEAT: new baseClassConfig(neatData, Config.__params).toJsonObject(),
+      NEAT: new DefaultClassConfig(neatData, Config.__params).toJsonObject(),
       [this.genome_config.constructor.name]: this.genome_config.toJsonObject(),
       [this.reproduction_config.constructor.name]:
         this.reproduction_config.toJsonObject(),
