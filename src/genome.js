@@ -63,8 +63,13 @@ export class DefaultGenomeConfig {
     this.node_gene_type.validateAttributes(this);
     this.connection_gene_type.validateAttributes(this);
 
-    this.input_keys = Array.from({ length: this.num_inputs }, (_, i) => -i - 1);
-    this.output_keys = Array.from({ length: this.num_outputs }, (_, i) => i);
+    // --- ROBUSTNESS FIX ---
+    // Ensure num_inputs and num_outputs are valid numbers before creating keys.
+    const num_inputs = Number(this.num_inputs) || 0;
+    const num_outputs = Number(this.num_outputs) || 0;
+
+    this.input_keys = Array.from({ length: num_inputs }, (_, i) => -i - 1);
+    this.output_keys = Array.from({ length: num_outputs }, (_, i) => i);
 
     this.connection_fraction = null;
 

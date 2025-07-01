@@ -2,7 +2,7 @@
  * Divides the population into species based on genomic distances.
  * This is a core component of the NEAT algorithm.
  */
-import { DefaultClassConfig, ConfigParameter } from "./config.js";
+import { ConfigParameter } from "./config.js";
 import { mean, stdev } from "./mathUtil.js";
 
 /**
@@ -86,13 +86,13 @@ class GenomeDistanceCache {
 /**
  * Encapsulates the default speciation scheme.
  */
-export class DefaultSpeciesSet extends DefaultClassConfig {
+export class DefaultSpeciesSet {
   /**
    * @param {Object} config - The species set configuration object.
    * @param {Object} reporters - The reporter set instance.
    */
   constructor(config, reporters) {
-    super(config, DefaultSpeciesSet.get_config_params());
+    this.species_set_config = config;
     this.reporters = reporters;
     this.indexer = 1; // Start species IDs from 1
     this.species = new Map();
@@ -115,6 +115,7 @@ export class DefaultSpeciesSet extends DefaultClassConfig {
   static parse_config(param_dict) {
     // This class is special; it doesn't return a simple config object,
     // but an instance of itself. The main loop must handle this.
+    // return param_dict;
     return new DefaultSpeciesSet(param_dict, { info: () => {} }); // Pass a dummy reporter
   }
 
@@ -125,7 +126,8 @@ export class DefaultSpeciesSet extends DefaultClassConfig {
    * @param {number} generation - The current generation number.
    */
   speciate(config, population, generation) {
-    const compatibility_threshold = this.compatibility_threshold; // From DefaultClassConfig
+    const compatibility_threshold =
+      this.species_set_config.compatibility_threshold; // From DefaultClassConfig
     const unspeciated = new Set(population.keys());
     const distances = new GenomeDistanceCache(config.genome_config);
 

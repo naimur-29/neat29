@@ -7,19 +7,20 @@ import { statFunctions } from "./mathUtil.js";
 /**
  * Implements the default stagnation scheme.
  */
-export class DefaultStagnation extends DefaultClassConfig {
+export class DefaultStagnation {
   /**
    * @param {Object} config - The stagnation configuration object.
    * @param {Object} reporters - The reporter set instance.
    */
   constructor(config, reporters) {
-    super(config, DefaultStagnation.get_config_params());
+    this.stagnation_config = config;
     this.reporters = reporters;
+    this.species_fitness_func =
+      statFunctions[this.stagnation_config.species_fitness_func];
 
-    this.species_fitness_func = statFunctions[this.species_fitness_func];
     if (!this.species_fitness_func) {
       throw new Error(
-        `Unexpected species fitness function: ${this.species_fitness_func}`,
+        `Unexpected species fitness function: ${this.stagnation_config.species_fitness_func}`,
       );
     }
   }
@@ -95,19 +96,19 @@ export class DefaultStagnation extends DefaultClassConfig {
     for (const [idx, [sid, s]] of species_data.entries()) {
       // A species is stagnant if it hasn't improved for `max_stagnation` generations.
       const stagnant_time = generation - s.last_improved;
-      let is_stagnant = stagnant_time >= this.max_stagnation;
+      let is_stagnant = stagnant_time >= this.stagnation_config.max_stagnation;
 
       // --- Elitism Check ---
       // The `species_elitism` number of best-performing species are never marked as stagnant.
       // Since the list is sorted from worst to best, we check if the current species is
       // within the top `species_elitism` group.
       const num_remaining = species_data.length - idx;
-      if (num_remaining <= this.species_elitism) {
+      if (num_remaining <= this.stagnation_config.species_elitism) {
         is_stagnant = false;
       }
 
       // An alternative check to ensure we don't go below the elitism number.
-      if (num_non_stagnant <= this.species_elitism) {
+      if (num_non_stagnant <= this.stagnation_config.species_elitism) {
         is_stagnant = false;
       }
 
