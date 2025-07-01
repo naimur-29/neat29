@@ -100,8 +100,8 @@ export class StdOutReporter extends BaseReporter {
   }
 
   end_generation(config, population, species_set) {
-    const ng = Object.keys(population).length;
-    const ns = Object.keys(species_set.species).length;
+    const ng = Array.from(population.keys()).length;
+    const ns = Array.from(species_set.species.keys()).length;
 
     if (this.show_species_detail) {
       console.log(`Population of ${ng} members in ${ns} species:`);

@@ -142,25 +142,25 @@ export class Config {
   ];
 
   /**
-   * @param {Object} genomeType - The class/constructor for the genome.
-   * @param {Object} reproductionType - The class/constructor for reproduction.
-   * @param {Object} speciesSetType - The class/constructor for the species set.
-   * @param {Object} stagnationType - The class/constructor for stagnation.
+   * @param {Object} genome_type - The class/constructor for the genome.
+   * @param {Object} reproduction_type - The class/constructor for reproduction.
+   * @param {Object} species_set_type - The class/constructor for the species set.
+   * @param {Object} stagnation_type - The class/constructor for stagnation.
    * @param {string} configString - The configuration as a JSON string.
    */
   constructor(
-    genomeType,
-    reproductionType,
-    speciesSetType,
-    stagnationType,
+    genome_type,
+    reproduction_type,
+    species_set_type,
+    stagnation_type,
     configString,
   ) {
     // Check that the provided types have the required static `parseConfig` method.
     for (const type of [
-      genomeType,
-      reproductionType,
-      speciesSetType,
-      stagnationType,
+      genome_type,
+      reproduction_type,
+      species_set_type,
+      stagnation_type,
     ]) {
       if (typeof type.parseConfig !== "function") {
         throw new Error(
@@ -169,10 +169,11 @@ export class Config {
       }
     }
 
-    this.genomeType = genomeType;
-    this.reproductionType = reproductionType;
-    this.speciesSetType = speciesSetType;
-    this.stagnationType = stagnationType;
+    // --- Changed to snake_case ---
+    this.genome_type = genome_type;
+    this.reproduction_type = reproduction_type;
+    this.species_set_type = species_set_type;
+    this.stagnation_type = stagnation_type;
 
     const parameters = JSON.parse(configString);
 
@@ -200,17 +201,18 @@ export class Config {
     }
 
     // --- Parse type-specific sections ---
-    const genomeDict = parameters[genomeType.name] || {};
-    this.genomeConfig = genomeType.parseConfig(genomeDict);
+    // --- Changed to snake_case ---
+    const genomeDict = parameters[genome_type.name] || {};
+    this.genome_config = genome_type.parseConfig(genomeDict);
 
-    const speciesSetDict = parameters[speciesSetType.name] || {};
-    this.speciesSetConfig = speciesSetType.parseConfig(speciesSetDict);
+    const speciesSetDict = parameters[species_set_type.name] || {};
+    this.species_set_config = species_set_type.parseConfig(speciesSetDict);
 
-    const stagnationDict = parameters[stagnationType.name] || {};
-    this.stagnationConfig = stagnationType.parseConfig(stagnationDict);
+    const stagnationDict = parameters[stagnation_type.name] || {};
+    this.stagnation_config = stagnation_type.parseConfig(stagnationDict);
 
-    const reproductionDict = parameters[reproductionType.name] || {};
-    this.reproductionConfig = reproductionType.parseConfig(reproductionDict);
+    const reproductionDict = parameters[reproduction_type.name] || {};
+    this.reproduction_config = reproduction_type.parseConfig(reproductionDict);
   }
 
   /**
@@ -228,27 +230,32 @@ export class Config {
     }
 
     // Other component sections
-    if (this.genomeConfig && typeof this.genomeConfig.toObject === "function") {
-      configData[this.genomeType.name] = this.genomeConfig.toObject();
+    // --- Changed to snake_case ---
+    if (
+      this.genome_config &&
+      typeof this.genome_config.toObject === "function"
+    ) {
+      configData[this.genome_type.name] = this.genome_config.toObject();
     }
     if (
-      this.speciesSetConfig &&
-      typeof this.speciesSetConfig.toObject === "function"
+      this.species_set_config &&
+      typeof this.species_set_config.toObject === "function"
     ) {
-      configData[this.speciesSetType.name] = this.speciesSetConfig.toObject();
+      configData[this.species_set_type.name] =
+        this.species_set_config.toObject();
     }
     if (
-      this.stagnationConfig &&
-      typeof this.stagnationConfig.toObject === "function"
+      this.stagnation_config &&
+      typeof this.stagnation_config.toObject === "function"
     ) {
-      configData[this.stagnationType.name] = this.stagnationConfig.toObject();
+      configData[this.stagnation_type.name] = this.stagnation_config.toObject();
     }
     if (
-      this.reproductionConfig &&
-      typeof this.reproductionConfig.toObject === "function"
+      this.reproduction_config &&
+      typeof this.reproduction_config.toObject === "function"
     ) {
-      configData[this.reproductionType.name] =
-        this.reproductionConfig.toObject();
+      configData[this.reproduction_type.name] =
+        this.reproduction_config.toObject();
     }
 
     return JSON.stringify(configData, null, 2);

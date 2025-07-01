@@ -103,7 +103,7 @@ export class Population {
    * @param {number|null} [n=null] - The number of generations to run. If null, runs until a solution is found or extinction occurs.
    * @returns {Promise<Object>} The best genome found during the run.
    */
-  async run(fitness_function, n = null) {
+  run(fitness_function, n = null) {
     if (this.config.no_fitness_termination && n === null) {
       throw new Error(
         "Cannot have no generation limit with no fitness termination.",
@@ -116,7 +116,7 @@ export class Population {
       this.reporters.start_generation(this.generation);
 
       // Evaluate all genomes using the user-provided async function.
-      await fitness_function(this.population, this.config);
+      fitness_function(this.population, this.config);
 
       // Gather and report statistics.
       let best = null;

@@ -148,24 +148,21 @@ export function main() {
     // p.add_reporter(new Checkpointer(5, null, "xor-checkpoint-")); // Checkpoint every 5 generations
 
     // E. Run for up to 300 generations.
-    p.run(eval_genomes, 10)
-      .then((winner) => {
-        // F. Display the winning genome and its performance.
-        console.log("\n--- Evolution Complete ---");
-        console.log("Best genome:\n" + winner.toString());
+    const winner = p.run(eval_genomes, 10);
+    // F. Display the winning genome and its performance.
+    console.log("\n--- Evolution Complete ---");
+    console.log("Best genome:\n" + winner.toString());
 
-        console.log("\nOutput from the winning network:");
-        const winner_net = FeedForwardNetwork.create(winner, main_config);
-        for (let i = 0; i < xor_inputs.length; i++) {
-          const xi = xor_inputs[i];
-          const xo = xor_outputs[i];
-          const output = winner_net.activate(xi);
-          console.log(
-            `Input: [${xi}], Expected: [${xo}], Got: [${output[0].toFixed(6)}]`,
-          );
-        }
-      })
-      .catch();
+    console.log("\nOutput from the winning network:");
+    const winner_net = FeedForwardNetwork.create(winner, main_config);
+    for (let i = 0; i < xor_inputs.length; i++) {
+      const xi = xor_inputs[i];
+      const xo = xor_outputs[i];
+      const output = winner_net.activate(xi);
+      console.log(
+        `Input: [${xi}], Expected: [${xo}], Got: [${output[0].toFixed(6)}]`,
+      );
+    }
   }
 
   // Start the XOR evolution run.

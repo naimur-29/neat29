@@ -10,7 +10,8 @@
  * @param {number[]} values - An array of numbers.
  * @returns {number} The sum of the numbers.
  */
-export const sum = (values) => values.reduce((acc, val) => acc + val, 0);
+export const sum = (values) =>
+  values.reduce((acc, val) => (!Number.isNaN(val) ? acc + val : acc + 0), 0);
 
 // --- Main Statistical Functions ---
 
@@ -74,7 +75,10 @@ export function variance(values) {
   const arr = Array.from(values);
   if (arr.length === 0) return 0;
   const m = mean(arr);
-  const sumOfSquares = arr.reduce((acc, val) => acc + (val - m) ** 2, 0);
+  const sumOfSquares = arr.reduce(
+    (acc, val) => (!Number.isNaN(val) ? acc + (val - m) ** 2 : acc + 0),
+    0,
+  );
   return sumOfSquares / arr.length;
 }
 

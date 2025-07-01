@@ -107,7 +107,7 @@ export class DefaultReproduction {
 
     // Normalize spawn amounts to match the target population size.
     const total_spawn = spawn_amounts.reduce((a, b) => a + b, 0);
-    if (total_spawn === 0) return spawn_amounts.map(() => min_species_size);
+    if (total_spawn === 0) return spawn_amounts.map(() => 0);
 
     const norm = pop_size / total_spawn;
     spawn_amounts = spawn_amounts.map((n) =>
