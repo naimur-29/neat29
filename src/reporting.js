@@ -149,7 +149,8 @@ export class StdOutReporter extends BaseReporter {
   }
 
   post_evaluate(config, population, species, best_genome) {
-    const fitnesses = Object.values(population).map((g) => g.fitness);
+    const fitnesses = Array.from(population.values()).map((g) => g.fitness);
+
     const fit_mean = mean(fitnesses);
     const fit_std = stdev(fitnesses);
 

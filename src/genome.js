@@ -31,8 +31,13 @@ export class DefaultGenomeConfig {
   ];
 
   constructor(params) {
+    // --- THIS IS THE FIX ---
+    // Create instances of the sets here.
     this.activation_defs = new ActivationFunctionSet();
-    this.aggregation_function_defs = new AggregationFunctionSet();
+    this.aggregation_defs = new AggregationFunctionSet();
+
+    // this.activation_defs = new ActivationFunctionSet();
+    // this.aggregation_function_defs = new AggregationFunctionSet();
 
     this._params = [
       new ConfigParameter("num_inputs", "number"),

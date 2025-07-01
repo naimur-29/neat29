@@ -60,7 +60,7 @@ export class ConfigParameter {
     try {
       switch (this.valueType) {
         case "string":
-          if (typeof value !== "string") throw new Error("must be a string");
+          if (typeof value !== "string") return String(value);
           return value;
         case "number":
           if (typeof value !== "number") throw new Error("must be a number");

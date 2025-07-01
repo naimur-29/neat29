@@ -155,6 +155,11 @@ export class DefaultReproduction {
     }
 
     // --- 2. Compute adjusted fitness for remaining species ---
+    // --- Fix: Calculate fitness stats from the *remaining* species only ---
+    for (const s of remaining_species) {
+      all_fitnesses.push(...s.get_fitnesses());
+    }
+
     const min_fitness = Math.min(...all_fitnesses);
     const max_fitness = Math.max(...all_fitnesses);
     const fitness_range = Math.max(1.0, max_fitness - min_fitness);
@@ -188,7 +193,8 @@ export class DefaultReproduction {
     // --- 4. Create the new generation ---
     for (let i = 0; i < remaining_species.length; i++) {
       const s = remaining_species[i];
-      let spawn = Math.max(spawn_amounts[i], this.elitism);
+
+      let spawn = Math.max(spawn_amounts[i], this.reproduction_config.elitism);
       if (spawn <= 0) continue;
 
       // Sort members by fitness in descending order.
