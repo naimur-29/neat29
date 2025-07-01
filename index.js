@@ -1,87 +1,78 @@
-import { DefaultSpeciesSet } from "./src/species.js";
+import { DefaultStagnation } from "./src/stagnation.js";
+import { Species } from "./src/species.js"; // From previous translation
 import { ReporterSet, StdOutReporter } from "./src/reporting.js"; // From previous translation
-import { DefaultGenome } from "./src/genome.js"; // From previous translation
 
 export function main() {
   // --- 1. Setup ---
   const reporters = new ReporterSet();
   reporters.add(new StdOutReporter(true));
 
-  // Mock configuration object (as created by your main Config class)
-  const mock_main_config = {
-    // Genome config needed for distance calculations
-    genome_config: {
-      compatibility_weight_coefficient: 0.5,
-      compatibility_disjoint_coefficient: 1.0,
-    },
-    // Species set config
-    species_set_config: {
-      compatibility_threshold: 3.0,
-    },
+  // Mock stagnation configuration object
+  const stagnation_config = {
+    species_fitness_func: "max", // Use max fitness of members to represent species fitness
+    max_stagnation: 3, // A species is stagnant after 3 generations of no improvement
+    species_elitism: 1, // Always keep at least the single best species
   };
 
-  // --- 2. Create a SpeciesSet instance ---
-  // Note: In a real implementation, the main Config class would create this instance.
-  const species_set = new DefaultSpeciesSet(
-    mock_main_config.species_set_config,
-    reporters,
+  // --- 2. Create a Stagnation instance ---
+  // In a real implementation, the main Config class would create this.
+  const stagnation = new DefaultStagnation(stagnation_config, reporters);
+
+  // --- 3. Create a mock set of species (Map) ---
+  const species_set = new Map();
+
+  // Species 1: Stagnant
+  const s1 = new Species(1, 0); // created at gen 0
+  s1.last_improved = 0; // last improved at gen 0
+  s1.fitness_history = [10, 10, 10, 10]; // has not improved
+  s1.members.set(1, { fitness: 10 });
+  s1.members.set(2, { fitness: 9 });
+  species_set.set(1, s1);
+
+  // Species 2: Improving
+  const s2 = new Species(2, 2); // created at gen 2
+  s2.last_improved = 4; // last improved now (gen 4)
+  s2.fitness_history = [15, 16, 18, 20]; // is improving
+  s2.members.set(3, { fitness: 20 });
+  s2.members.set(4, { fitness: 19 });
+  species_set.set(2, s2);
+
+  // Species 3: Weak but not yet stagnant
+  const s3 = new Species(3, 3); // created at gen 3
+  s3.last_improved = 3; // last improved at gen 3
+  s3.fitness_history = [5, 5]; // only 1 gen of no improvement
+  s3.members.set(5, { fitness: 5 });
+  species_set.set(3, s3);
+
+  // --- 4. Run the update method ---
+  let current_generation = 4;
+  console.log(
+    `--- Updating stagnation info at generation ${current_generation} ---`,
   );
-
-  // --- 3. Create a mock population (a Map of genomes) ---
-  const population = new Map();
-  // Create a few genomes (in a real scenario, these would be fully configured)
-  const genome1 = new DefaultGenome(1);
-  genome1.fitness = 10;
-  const genome2 = new DefaultGenome(2);
-  genome2.fitness = 11;
-  const genome3 = new DefaultGenome(3);
-  genome3.fitness = 9;
-
-  // To make distance meaningful, let's mock the distance function for this example
-  genome1.distance = (other, config) => 1.0; // close to self
-  genome2.distance = (other, config) => 5.0; // far from genome1
-  genome3.distance = (other, config) => 1.2; // close to genome1
-
-  population.set(1, genome1);
-  population.set(2, genome2);
-  population.set(3, genome3);
-
-  // --- 4. Run Speciation ---
-  let generation = 1;
-  // Initially, species are empty. Speciation will create them.
-  console.log("--- Running Speciation: Generation 1 ---");
-  species_set.speciate(mock_main_config, population, generation);
+  // The `update` method modifies the species in-place (updates their fitness)
+  // and returns a list indicating which are stagnant.
+  const stagnation_results = stagnation.update(species_set, current_generation);
 
   // --- 5. Inspect Results ---
-  console.log(`\nTotal species created: ${species_set.species.size}`);
-  for (const [sid, s] of species_set.species.entries()) {
-    const member_keys = Array.from(s.members.keys());
+  console.log("\nStagnation Results: [speciesId, speciesInstance, isStagnant]");
+  for (const [sid, s, is_stagnant] of stagnation_results) {
     console.log(
-      `- Species ${sid}: Representative=${s.representative.key}, Members=[${member_keys}]`,
+      `- Species ${sid}: Fitness=${s.fitness.toFixed(2)}, Last Improved=${s.last_improved}, Stagnant=${is_stagnant}`,
     );
   }
-  console.log(
-    `\nGenome 3 belongs to species: ${species_set.get_species_id(3)}`,
-  );
-  // Expected output:
-  // - Genome 1 and 3 will be in one species (distance < 3.0)
-  // - Genome 2 will be in its own new species (distance > 3.0)
 
-  // --- 6. Simulate a new generation ---
-  // Let's pretend a new generation has been created.
-  // We'll reuse the same genomes but add a representative to the first species
-  // to show how existing species are updated.
-  const first_species = species_set.get_species(1);
-  first_species.representative = genome1; // Set a representative from the "old" generation
+  // Expected Output:
+  // - Species 3: Fitness=5.00, Last Improved=3, Stagnant=false (worst fitness but not stagnant long enough)
+  // - Species 1: Fitness=10.00, Last Improved=0, Stagnant=true (stagnant for 4 gens > max_stagnation of 3)
+  // - Species 2: Fitness=20.00, Last Improved=4, Stagnant=false (best fitness and protected by elitism)
 
-  generation = 2;
-  console.log("\n--- Running Speciation: Generation 2 ---");
-  species_set.speciate(mock_main_config, population, generation);
-  console.log(`\nTotal species: ${species_set.species.size}`);
-  for (const [sid, s] of species_set.species.entries()) {
-    const member_keys = Array.from(s.members.keys());
-    console.log(
-      `- Species ${sid}: Representative=${s.representative.key}, Members=[${member_keys}]`,
-    );
+  // --- 6. In the main loop, you would then remove the stagnant species ---
+  for (const [sid, s, is_stagnant] of stagnation_results) {
+    if (is_stagnant) {
+      console.log(`\nRemoving stagnant species ${sid}...`);
+      species_set.delete(sid);
+    }
   }
+
+  console.log(`\nRemaining species count: ${species_set.size}`); // Should be 2
 }
